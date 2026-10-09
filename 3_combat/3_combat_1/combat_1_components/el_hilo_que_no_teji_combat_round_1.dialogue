@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: The Threadbare Authors
+# SPDX-License-Identifier: MPL-2.0
+~ start
+Lino: [speed=0.4] ¿Qué es este lugar...? [next=auto]
+Lino: [speed=0.7] Se ve tan viejo y desgastado...
+=> END
+~ well_done
+Lino: Adios...
+=> END
+~ voz_lejana
+???: [speed=0.5]No vayas a llegar demasiado tarde otra vez, niño...[next=3.0]
+=> END

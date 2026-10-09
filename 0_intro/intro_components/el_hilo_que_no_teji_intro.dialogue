@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: The Threadbare Authors
+# SPDX-License-Identifier: MPL-2.0
+
+~ start
+Lino: [speed=0.7]... Hace frío... [speed=0.7]¿Manchitas? [next=auto]
+=> END
+
+~ puerta
+Lino: [speed=0.7]¿La puerta... por qué está[speed=0.7] abierta? [next=auto]
+=> END
+
+~ charco
+Lino: [speed=0.45]... Si esto... [speed=0.45]es un sueño... [speed=0.4]¿por qué tengo su collar en mis manos? [next=auto]
+=> END

@@ -1,0 +1,80 @@
+// SPDX-FileCopyrightText: The Threadbare Authors
+// SPDX-License-Identifier: MPL-2.0
+shader_type canvas_item;
+
+uniform float saturation : hint_range(0.0, 1.0) = 0.0;
+// 0.6 reduce el brillo un 40 %.
+uniform float darkness_factor : hint_range(0.0, 1.0) = 0.6;
+
+// Ondas de color: anillos que salen de un punto del mundo y, al pasar,
+// devuelven la saturación poco a poco. Con onda_tiempo < 0 están apagadas.
+uniform vec2 onda_origen = vec2(0.0);
+uniform float onda_tiempo = -1.0;
+uniform float onda_velocidad = 330.0;
+uniform float onda_intervalo = 4.5;
+uniform int onda_cantidad = 5;
+uniform float onda_ancho = 260.0;
+uniform float onda_brillo_cresta = 0.25;
+// Onda pequeña al recoger un hilo: el color solo aparece en el anillo mientras
+// pasa (no se queda), y el anillo se apaga al llegar a onda_alcance píxeles.
+uniform bool onda_solo_cresta = false;
+uniform float onda_alcance = 0.0;
+// Cuánto color trae el anillo de la onda pequeña (0 = nada, 1 = color pleno).
+uniform float onda_color_cresta = 1.0;
+// El anillo puede teñirse del color del hilo que lo lanza.
+uniform vec3 onda_tinte : source_color = vec3(1.0);
+uniform float onda_tinte_fuerza : hint_range(0.0, 1.0) = 0.0;
+// Permite hacer aparecer poco a poco algo que usa este material.
+uniform float opacidad : hint_range(0.0, 1.0) = 1.0;
+
+const int MAXIMO_DE_ONDAS = 8;
+
+varying vec2 pos_mundo;
+// Transparencia que el nodo pide con modulate / self_modulate (por ejemplo, el
+// parpadeo de fantasma de Luto). El color del modulate se sigue ignorando.
+varying float opacidad_del_nodo;
+
+void vertex() {
+    pos_mundo = (MODEL_MATRIX * vec4(VERTEX, 0.0, 1.0)).xy;
+    opacidad_del_nodo = COLOR.a;
+}
+
+void fragment() {
+    vec4 tex_color = texture(TEXTURE, UV);
+
+    float saturacion_final = saturation;
+    float cresta = 0.0;
+    if (onda_tiempo >= 0.0) {
+        float distancia = distance(pos_mundo, onda_origen);
+        float ondas_pasadas = 0.0;
+        for (int i = 0; i < MAXIMO_DE_ONDAS; i++) {
+            if (i >= onda_cantidad) {
+                break;
+            }
+            float radio = (onda_tiempo - float(i) * onda_intervalo) * onda_velocidad;
+            if (radio > 0.0) {
+                ondas_pasadas += 1.0 - smoothstep(radio - onda_ancho, radio, distancia);
+                cresta = max(cresta, 1.0 - clamp(abs(distancia - radio + onda_ancho * 0.5) / (onda_ancho * 0.5), 0.0, 1.0));
+            }
+        }
+        if (onda_solo_cresta) {
+            if (onda_alcance > 0.0) {
+                cresta *= 1.0 - smoothstep(onda_alcance * 0.55, onda_alcance, distancia);
+            }
+            saturacion_final = mix(saturation, 1.0, cresta * onda_color_cresta);
+        } else {
+            float avance = clamp(ondas_pasadas / float(onda_cantidad), 0.0, 1.0);
+            saturacion_final = mix(saturation, 1.0, avance);
+        }
+    }
+
+    float gray = dot(tex_color.rgb, vec3(0.299, 0.587, 0.114));
+
+    vec3 mixed_color = mix(vec3(gray), tex_color.rgb, saturacion_final);
+
+    // El anillo de un hilo se tiñe de su color, conservando la luz de cada cosa.
+    mixed_color = mix(mixed_color, onda_tinte * (gray * 1.5 + 0.2), cresta * onda_tinte_fuerza);
+
+    COLOR.rgb = mixed_color * darkness_factor * (1.0 + onda_brillo_cresta * cresta);
+    COLOR.a = tex_color.a * opacidad * opacidad_del_nodo;
+}
